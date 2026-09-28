@@ -16,7 +16,9 @@ spec:
     namespaces: [messaging]
     labelSelectors:
       app.kubernetes.io/name: rabbit-ha
-  direction: both
+  # `both` and `from` require an explicit target; with an empty target only
+  # `to` is accepted by the admission webhook.
+  direction: to
   delay:
     latency: 100ms
     jitter: 10ms
