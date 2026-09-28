@@ -1,0 +1,89 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: messaging
+---
+apiVersion: rabbitmq.com/v1beta1
+kind: RabbitmqCluster
+metadata:
+  name: rabbit-ha
+  namespace: messaging
+spec:
+  # Three nodes is the smallest cluster where a quorum queue survives the loss
+  # of one node: 2 of 3 replicas still form a Raft majority.
+  replicas: 3
+
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+  persistence:
+    storageClassName: standard
+    storage: 1Gi
+
+  # Reachable from the host laptop through the kind extraPortMappings, so the
+  # defense demo does not depend on a `kubectl port-forward` staying alive.
+  service:
+    type: NodePort
+
+  affinity:
+    # Keep RabbitMQ off the control plane - only the labelled workers.
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: thesis.local/rabbitmq
+                operator: In
+                values: ["true"]
+    # Without this the scheduler is free to stack two RabbitMQ pods on one
+    # worker; stopping that worker would then destroy the Raft majority and
+    # the fault-tolerance demonstration would prove the opposite of the thesis.
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values: ["rabbit-ha"]
+          topologyKey: kubernetes.io/hostname
+
+  rabbitmq:
+    additionalConfig: |
+      # Every queue declared without an explicit type becomes a quorum queue,
+      # so a careless client cannot silently fall back to a classic queue.
+      default_queue_type = quorum
+    additionalPlugins:
+      - rabbitmq_management
+      - rabbitmq_prometheus
+
+  override:
+    service:
+      spec:
+        ports:
+          - name: amqp
+            port: 5672
+            targetPort: 5672
+            nodePort: 30567
+          - name: management
+            port: 15672
+            targetPort: 15672
+            nodePort: 30672
+---
+# A quorum queue needs 2 of its 3 replicas to accept a write. Kubernetes will
+# happily evict all three brokers at once during a node drain, which destroys
+# that majority. This budget allows one voluntary disruption at a time.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: rabbit-ha
+  namespace: messaging
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rabbit-ha

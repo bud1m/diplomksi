@@ -1,0 +1,14 @@
+# Go build output and tool binaries
+operator/bin/
+operator/cover.out
+operator/dist/
+
+# Experiment output. The committed results under experiments/results/ are the
+# measurements cited in the thesis, so they are tracked on purpose.
+/tmp/
+
+# Editor and OS noise
+.DS_Store
+*.swp
+.idea/
+.vscode/

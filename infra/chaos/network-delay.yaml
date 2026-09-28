@@ -1,0 +1,23 @@
+# Experiment 2 - latency injection.
+#
+# 100 ms of delay between brokers does not break the cluster, it slows Raft
+# down. Use it to show how election and replication timings move, and to prove
+# the custom operator tolerates a slow RabbitMQ HTTP API instead of crashing.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: rabbit-network-delay
+  namespace: messaging
+spec:
+  action: delay
+  mode: all
+  duration: 120s
+  selector:
+    namespaces: [messaging]
+    labelSelectors:
+      app.kubernetes.io/name: rabbit-ha
+  direction: both
+  delay:
+    latency: 100ms
+    jitter: 10ms
+    correlation: "50"

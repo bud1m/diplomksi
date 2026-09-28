@@ -1,0 +1,27 @@
+# Experiment 1 - network partition.
+#
+# Cuts rabbit-ha-server-2 off from the other two brokers. The remaining two
+# still hold a Raft majority (2 of 3), so a quorum queue must stay writable
+# throughout. This is the experiment that shows quorum queues behaving
+# differently from the deprecated classic mirrored queues, which would have
+# accepted writes on both sides of the split.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: rabbit-partition-one-node
+  namespace: messaging
+spec:
+  action: partition
+  mode: one
+  duration: 60s
+  selector:
+    namespaces: [messaging]
+    labelSelectors:
+      app.kubernetes.io/name: rabbit-ha
+  direction: both
+  target:
+    mode: all
+    selector:
+      namespaces: [messaging]
+      labelSelectors:
+        app.kubernetes.io/name: rabbit-ha

@@ -1,0 +1,15 @@
+apiVersion: messaging.thesis.local/v1alpha1
+kind: MicroserviceMessagingProfile
+metadata:
+  name: orders-service
+  namespace: default
+spec:
+  clusterRef:
+    name: rabbit-ha
+    namespace: messaging
+  vhost: orders
+  queues:
+    - name: orders.created
+      routingKey: order.created
+    - name: orders.shipped
+      routingKey: order.shipped

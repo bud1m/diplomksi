@@ -1,0 +1,17 @@
+# Experiment 3 - kill a broker.
+#
+# The scripted equivalent of `docker stop diplomski-ha-worker2`, but targeted
+# at the pod rather than the node, so the StatefulSet brings it back and you
+# can watch the Raft log catch up on rejoin.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: rabbit-kill-one-broker
+  namespace: messaging
+spec:
+  action: pod-kill
+  mode: one
+  selector:
+    namespaces: [messaging]
+    labelSelectors:
+      app.kubernetes.io/name: rabbit-ha
