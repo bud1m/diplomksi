@@ -1,14 +1,14 @@
 Experiment 1 - broker pod failure
-  run at                 2026-09-30T12:14:39
-  victim pod             rabbit-ha-server-0
+  run at                 2026-09-30T12:12:15
+  victim pod             rabbit-ha-server-1
   publish attempts       296
   succeeded              296
   failed                 0
   failed after the kill  0
   client outage window   200 ms
-  pod Ready again after  51227 ms
+  pod Ready again after  50919 ms
   Raft members before    3
   Raft members after     3
-  Raft leader before     rabbit@rabbit-ha-server-0.rabbit-ha-nodes.messaging
+  Raft leader before     rabbit@rabbit-ha-server-1.rabbit-ha-nodes.messaging
   Raft leader after      rabbit@rabbit-ha-server-2.rabbit-ha-nodes.messaging
   verdict                PASS

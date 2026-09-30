@@ -1,13 +1,13 @@
 Experiment 4 - network partition
-  run at                 2026-09-30T12:27:09
+  run at                 2026-09-30T12:25:18
   chaos phase            Run  (injected containers: 1 1 1 1)
-  publish attempts       132
-  succeeded              119
-  failed                 13
-  attempts after split   83
-  failed after split     13  (15.7%)
-  longest unbroken gap   10006 ms
-  failure kinds          {'TimeoutError': 13}
+  publish attempts       181
+  succeeded              170
+  failed                 11
+  attempts after split   132
+  failed after split     11  (8.3%)
+  longest unbroken gap   5003 ms
+  failure kinds          {'TimeoutError': 11}
   Raft members before    3
   Raft members during    3
   Raft members after     3

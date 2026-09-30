@@ -1,7 +1,7 @@
 Experiment 2 - PodDisruptionBudget and the Raft majority
-  run at                 2026-09-30T12:16:34+02:00
+  run at                 2026-09-30T12:15:08+02:00
   minAvailable           2
-  disruptionsAllowed     1
+  disruptionsAllowed     0
   first eviction         HTTP 201  (expected 201, allowed)
   second eviction        HTTP 429  (expected 429, refused)
   refusal message        Cannot evict pod as it would violate the pod's disruption budget.

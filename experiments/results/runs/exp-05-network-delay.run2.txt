@@ -1,8 +1,8 @@
 Experiment 5 - 100 ms latency between brokers
-  run at                 2026-09-30T12:31:29
+  run at                 2026-09-30T12:30:02
   chaos phase            Run
   attempts before delay  49  (failed 0)
-  attempts during delay  76  (failed 0)
+  attempts during delay  72  (failed 0)
   Raft members during    3
   leader before          rabbit@rabbit-ha-server-1.rabbit-ha-nodes.messaging
   leader after           rabbit@rabbit-ha-server-1.rabbit-ha-nodes.messaging

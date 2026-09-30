@@ -70,11 +70,11 @@ def main():
 
     fig, axes = plt.subplots(2, 1, figsize=(7.2, 4.4))
     panel(axes[0], e3, 10.0,
-          'Eksperiment 3 — zaustavljen radni čvor sa Raft liderom',
-          '215 od 227 objava uspešno · najduži prekid 15,0 s')
+          'Eksperiment 3 — zaustavljen radni čvor sa Raft liderom (treći prolaz)',
+          '169 od 180 objava uspešno · najduži prekid 50,0 s')
     panel(axes[1], e4, 10.0,
-          'Eksperiment 4 — mrežna particija jednog brokera',
-          '138 od 150 objava uspešno · najduži prekid 10,0 s')
+          'Eksperiment 4 — mrežna particija jednog brokera (treći prolaz)',
+          '119 od 132 objava uspešno · najduži prekid 10,0 s')
 
     # One legend for the whole figure; height already distinguishes the two.
     from matplotlib.lines import Line2D

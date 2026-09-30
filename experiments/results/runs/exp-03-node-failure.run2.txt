@@ -1,16 +1,16 @@
 Experiment 3 - whole node failure
-  run at                 2026-09-30T12:21:36
-  stopped node           diplomski-ha-worker2
-  it was running         rabbit-ha-server-0 (the Raft leader)
+  run at                 2026-09-30T12:19:55
+  stopped node           diplomski-ha-worker3
+  it was running         rabbit-ha-server-2 (the Raft leader)
   node Ready condition   Unknown
-  publish attempts       180
-  succeeded              169
+  publish attempts       196
+  succeeded              185
   failed                 11
   failed after the stop  11
   node marked NotReady   after 41s
-  gap to first success   51369 ms
-  failure rate after     8.5% of attempts
-  longest unbroken gap   50025 ms
+  gap to first success   52735 ms
+  failure rate after     7.5% of attempts
+  longest unbroken gap   50021 ms
   failure kinds          {'TimeoutError': 10, 'RemoteDisconnected': 1}
   Raft members visible   3
   leader during outage   rabbit@rabbit-ha-server-0.rabbit-ha-nodes.messaging
