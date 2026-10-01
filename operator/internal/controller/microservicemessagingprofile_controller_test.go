@@ -235,6 +235,49 @@ var _ = Describe("MicroserviceMessagingProfile Controller", func() {
 		Expect(updated.Status.Conditions[0].Reason).To(Equal(messagingv1alpha1.ReasonBrokerUnreachable))
 	})
 
+	It("reports ClusterSecretNotFound when the broker credentials are missing", func() {
+		// Every other spec injects a fake broker, so the real brokerClient -
+		// the code that reads <cluster>-default-user and builds the client -
+		// is never exercised. Drop the injection and point the profile at a
+		// cluster whose Secret does not exist.
+		reconciler.NewBroker = nil
+
+		result, err := reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: key})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result.RequeueAfter).To(BeNumerically(">", 0))
+
+		updated := new(messagingv1alpha1.MicroserviceMessagingProfile)
+		Expect(k8sClient.Get(ctx, key, updated)).To(Succeed())
+		Expect(updated.Status.Conditions).NotTo(BeEmpty())
+		Expect(updated.Status.Conditions[0].Status).To(Equal(metav1.ConditionFalse))
+		Expect(updated.Status.Conditions[0].Reason).
+			To(Equal(messagingv1alpha1.ReasonClusterSecretMissing))
+	})
+
+	It("holds the finalizer when cleanup cannot reach the broker", func() {
+		reconcileOnce()
+
+		current := new(messagingv1alpha1.MicroserviceMessagingProfile)
+		Expect(k8sClient.Get(ctx, key, current)).To(Succeed())
+		Expect(k8sClient.Delete(ctx, current)).To(Succeed())
+
+		// A broker that fails mid-cleanup must not let the object vanish with
+		// the user still valid, which is the whole point of the finalizer.
+		broker.setFailing(true)
+		result, err := reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: key})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result.RequeueAfter).To(BeNumerically(">", 0))
+
+		still := new(messagingv1alpha1.MicroserviceMessagingProfile)
+		Expect(k8sClient.Get(ctx, key, still)).To(Succeed())
+		Expect(still.Finalizers).To(ContainElement(messagingv1alpha1.Finalizer))
+
+		// Once the broker answers again, cleanup completes and the object goes.
+		broker.setFailing(false)
+		reconcileOnce()
+		Expect(apierrors.IsNotFound(k8sClient.Get(ctx, key, still))).To(BeTrue())
+	})
+
 	It("revokes the user and removes the queues on delete", func() {
 		reconcileOnce()
 

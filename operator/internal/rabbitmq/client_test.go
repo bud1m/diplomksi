@@ -251,3 +251,64 @@ func TestAnErrorCarriesTheBrokerMessage(t *testing.T) {
 		t.Errorf("error = %q, want it to carry the broker message", got)
 	}
 }
+
+func TestEnsureExchangeIsTopicAndDurable(t *testing.T) {
+	client, rec := setup(t)
+
+	if err := client.EnsureExchange(context.Background(), "orders", "orders-service"); err != nil {
+		t.Fatalf("EnsureExchange: %v", err)
+	}
+
+	c := rec.find(http.MethodPut, "/api/exchanges/orders/orders-service")
+	if c == nil {
+		t.Fatal("no PUT to the exchange path")
+	}
+	// A direct exchange would ignore the wildcard routing keys the profile
+	// allows, so the type is part of the contract, not a default.
+	if c.body["type"] != "topic" {
+		t.Errorf("type = %v, want topic", c.body["type"])
+	}
+	if c.body["durable"] != true {
+		t.Errorf("durable = %v, want true", c.body["durable"])
+	}
+}
+
+func TestEnsureUserGetsNoManagementTag(t *testing.T) {
+	client, rec := setup(t)
+
+	if err := client.EnsureUser(context.Background(), "shop-orders", "s3cret"); err != nil {
+		t.Fatalf("EnsureUser: %v", err)
+	}
+
+	c := rec.find(http.MethodPut, "/api/users/shop-orders")
+	if c == nil {
+		t.Fatal("no PUT to the user path")
+	}
+	// The thesis claims the generated user is an AMQP-only identity that
+	// cannot reach the management API. That property is exactly this empty
+	// tag list, so it is asserted rather than assumed.
+	if tags, ok := c.body["tags"]; !ok || tags != "" {
+		t.Errorf("tags = %v, want the empty string so the user has no management access", tags)
+	}
+	if c.body["password"] != "s3cret" {
+		t.Errorf("password not forwarded, got %v", c.body["password"])
+	}
+}
+
+func TestDeleteExchangeToleratesAMissingExchange(t *testing.T) {
+	client, rec := setup(t)
+	rec.status["DELETE /api/exchanges/orders/orders-service"] = http.StatusNotFound
+
+	if err := client.DeleteExchange(context.Background(), "orders", "orders-service"); err != nil {
+		t.Errorf("DeleteExchange on a missing exchange: %v", err)
+	}
+}
+
+func TestDeleteExchangeReportsARealFailure(t *testing.T) {
+	client, rec := setup(t)
+	rec.status["DELETE /api/exchanges/orders/orders-service"] = http.StatusInternalServerError
+
+	if err := client.DeleteExchange(context.Background(), "orders", "orders-service"); err == nil {
+		t.Error("a 500 must be an error, or cleanup reports success while the exchange remains")
+	}
+}
