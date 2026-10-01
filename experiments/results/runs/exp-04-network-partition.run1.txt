@@ -1,19 +1,19 @@
 Experiment 4 - network partition
-  run at                 2026-09-30T12:23:27
+  run at                 2026-10-01T23:02:07
   chaos phase            Run  (injected containers: 1 1 1 1)
-  publish attempts       102
-  succeeded              88
-  failed                 14
-  attempts after split   64
-  failed after split     13  (20.3%)
-  longest unbroken gap   60035 ms
-  failure kinds          {'TimeoutError': 13}
+  publish attempts       89
+  succeeded              74
+  failed                 15
+  attempts after split   39
+  failed after split     15  (38.5%)
+  longest unbroken gap   5003 ms
+  failure kinds          {'TimeoutError': 15}
   Raft members before    3
   Raft members during    3
   Raft members after     3
-  leader before          rabbit-ha-server-1
+  leader before          rabbit-ha-server-0
   leader during          rabbit@rabbit-ha-server-1.rabbit-ha-nodes.messaging
   leader after           rabbit@rabbit-ha-server-1.rabbit-ha-nodes.messaging
-  pods Ready during      false true true
-  Service endpoints      2
+  pods Ready during      true true true
+  Service endpoints      3
   verdict                PASS

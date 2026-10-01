@@ -6,8 +6,6 @@ Ovo je praktični deo diplomskog rada. Sastoji se iz dve faze.
 
 **Faza 2** dodaje namenski Kubernetes operator, pisan u jeziku Go pomoću okvira Kubebuilder. Operator čita jedan *Custom Resource* i na osnovu njega obezbeđuje kompletno okruženje za razmenu poruka jednog mikroservisa: *vhost*, razmenu, *quorum* redove sa pripadajućim *dead letter* redovima, namenskog korisnika i Kubernetes tajnu sa pristupnim nizom.
 
-Sam rad nalazi se u `docs/thesis/diplomski.md`.
-
 ## Preduslovi
 
 Na svojoj mašini treba da imate:
@@ -112,12 +110,6 @@ docker start diplomski-ha-worker2
 ## Sadržaj repozitorijuma
 
 ```
-docs/thesis/
-  diplomski.md                   Rad. Ovo je izvor; sve ostalo u toj fascikli
-                                 generiše se iz njega.
-  diplomski.docx                 Generisano. Ne menjati rukom.
-  slike/*.mmd                    Mermaid izvori dijagrama
-  md-to-docx.js                  Markdown u .docx, sa uputstvom u README-u
 infra/
   kind/kind-ha-config.yaml       Topologija klastera i preslikavanje portova
   operators/cert-manager.yaml    Fiksirana verzija cert-manager-a
@@ -132,7 +124,7 @@ experiments/
   exp-01..05-*.sh                Po jedna skripta za svaki scenario otkaza
   run-repeated.sh                Pokreće svih pet eksperimenata N puta
   aggregate.py                   Svodi prolaze na medijanu, minimum i maksimum
-  plot-results.py                Crta Sliku 6.1 iz sirovih uzoraka
+  plot-results.py                Crta grafik vremenske raspodele otkaza
   results/                       Izmereni izlazi, uključujući svih 15 prolaza
 setup-demo.sh                    Podiže celo okruženje
 verify-demo.sh                   18 provera nad živim klasterom

@@ -73,8 +73,8 @@ def main():
           'Eksperiment 3 - zaustavljen radni čvor sa Raft liderom (treći prolaz)',
           '169 od 180 objava uspešno · jedan neprekidan prekid od 50,0 s')
     panel(axes[1], e4, 10.0,
-          'Eksperiment 4 - mrežna particija jednog brokera (treći prolaz)',
-          '119 od 132 objava uspešno · 32 uspeha između otkaza')
+          'Eksperiment 4 - izolovan Raft lider (treći prolaz)',
+          '91 od 106 objava uspešno · uspesi i otkazi se smenjuju')
 
     # One legend for the whole figure; height already distinguishes the two.
     from matplotlib.lines import Line2D

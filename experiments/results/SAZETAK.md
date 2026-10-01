@@ -32,12 +32,12 @@
 
 | Veličina | Medijana | Najmanje | Najviše | Raspon |
 | :- | -: | -: | -: | -: |
-| pokušaja objave | 132 | 102 | 181 | 79 |
-| uspešnih | 119 | 88 | 170 | 82 |
-| neuspešnih | 13 | 11 | 14 | 3 |
-| najduži neprekidni prekid | 10006 | 5003 | 60035 | 55032 |
-| pokušaja posle podele | 83 | 64 | 132 | 68 |
-| neuspešnih posle podele | 13 | 11 | 13 | 2 |
+| pokušaja objave | 89 | 89 | 106 | 17 |
+| uspešnih | 74 | 74 | 91 | 17 |
+| neuspešnih | 15 | 15 | 15 | — |
+| najduži neprekidni prekid | 10008 | 5003 | 10008 | 5005 |
+| pokušaja posle podele | 40 | 39 | 57 | 18 |
+| neuspešnih posle podele | 15 | 15 | 15 | — |
 | Raft članova tokom otkaza | 3 | 3 | 3 | — |
 
 ## exp-05-network-delay  (3 prolaza)

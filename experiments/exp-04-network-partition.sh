@@ -14,14 +14,43 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 guard
 
 OUT="$RESULTS/exp-04-network-partition.txt"
-CHAOS="$(cd "$(dirname "${BASH_SOURCE[0]}")/../infra/chaos" && pwd)/network-partition.yaml"
 
+# The committed manifest uses `mode: one`, which lets Chaos Mesh pick any
+# broker. That is the easy case: isolating a follower costs one Raft vote and
+# the leader never moves, so the experiment would not test what it claims to.
+# Generate the manifest instead, naming the current leader explicitly, and let
+# the partition outlast the measurement so no failure can be attributed to the
+# period after it was lifted.
 LEADER_POD=$(queue_leader orders orders.created | sed 's/^rabbit@//; s/\..*//')
-log "Experiment 4: partition one broker. Current leader is $LEADER_POD"
+CHAOS="$(mktemp -t partition).yaml"
+cat > "$CHAOS" <<YAML
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: rabbit-partition-one-node
+  namespace: $NS
+spec:
+  action: partition
+  mode: all
+  duration: 110s
+  selector:
+    pods:
+      $NS:
+        - $LEADER_POD
+  direction: both
+  target:
+    mode: all
+    selector:
+      namespaces: [$NS]
+      labelSelectors:
+        app.kubernetes.io/name: $CLUSTER
+YAML
+log "Experiment 4: partition the Raft leader ($LEADER_POD) from the other two"
 
 cleanup() {
   note "removing the chaos experiment"
   k delete -f "$CHAOS" --ignore-not-found >/dev/null 2>&1 || true
+  rm -f "$CHAOS"
 }
 trap cleanup EXIT
 
