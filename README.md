@@ -1,183 +1,148 @@
-# Highly available RabbitMQ on Kubernetes, with a custom Go operator
+# Visoko dostupan RabbitMQ na Kubernetes-u, sa namenskim Go operatorom
 
-This repository holds the practical part of the thesis. It has two phases.
+Ovo je praktični deo diplomskog rada. Sastoji se iz dve faze.
 
-**Phase 1** deploys a 3-node RabbitMQ cluster on Kubernetes. The cluster uses
-quorum queues. A quorum queue replicates its messages with the Raft consensus
-algorithm. RabbitMQ deprecated classic mirrored queues, so quorum queues are
-the current standard for data safety.
+**Faza 1** postavlja RabbitMQ klaster od tri čvora na Kubernetes platformi. Klaster koristi *quorum* redove — redove koji svoje poruke replikuju Raft algoritmom konsenzusa. RabbitMQ je uklonio klasične *mirrored* redove, pa su *quorum* redovi današnji standard za trajnost poruke.
 
-**Phase 2** adds a custom Kubernetes operator, written in Go with Kubebuilder.
-The operator reads one custom resource and provisions a complete messaging
-setup for a microservice. See `operator/README.md`.
+**Faza 2** dodaje namenski Kubernetes operator, pisan u jeziku Go pomoću okvira Kubebuilder. Operator čita jedan *Custom Resource* i na osnovu njega obezbeđuje kompletno okruženje za razmenu poruka jednog mikroservisa: *vhost*, razmenu, *quorum* redove sa pripadajućim *dead letter* redovima, namenskog korisnika i Kubernetes tajnu sa pristupnim nizom.
 
-## What you need
+Sam rad nalazi se u `docs/thesis/diplomski.md`.
 
-Install these on your machine:
+## Preduslovi
 
-- Docker Desktop, or Docker Engine. Give it 12 GB of memory or more.
-- `kind`, version 0.33 or later
+Na svojoj mašini treba da imate:
+
+- Docker Desktop ili Docker Engine, sa **najmanje 12 GB** dodeljene memorije
+- `kind`, verzija 0.33 ili novija
 - `kubectl`
 - `helm`
-- Go 1.23 or later, and `kubebuilder`. Phase 2 needs these. Phase 1 does not.
+- Go 1.23 ili noviji i `kubebuilder` — potrebni su samo za Fazu 2
 
-## How to run the demonstration
+## Pokretanje
 
 ```bash
 ./setup-demo.sh
 ```
 
-The script takes about 10 minutes on a first run. It is idempotent. If a step
-fails, run the script again. It keeps the work that already succeeded.
+Prvo pokretanje traje oko deset minuta. Skripta je idempotentna: ako neki korak otkaže, jednostavno je pokrenite ponovo i nastaviće odande gde je stala.
 
-To delete everything and start again, run two commands:
+Za brisanje i ponovnu izgradnju:
 
 ```bash
-# 1. Destroy the environment
 ./setup-demo.sh --clean
-
-# 2. Build it again
 ./setup-demo.sh
 ```
 
-Open the RabbitMQ management UI at http://localhost:15672. Log in with
-`admin` / `admin`.
+Po završetku skripta ispisuje pristupne podatke. *Management* korisnički interfejs otvara se na http://localhost:15672, sa nalogom `admin` / `admin`.
 
-The Cluster Operator also generates a random user for its own health probes.
-Do not delete it. The script prints its name at the end.
+Cluster Operator uz to generiše sopstvenog korisnika za svoje provere ispravnosti. **Nemojte ga brisati** — skripta njegovo ime ispisuje na kraju.
 
-## What the script builds
+## Šta skripta gradi
 
-| Step | Component | Purpose |
+| Korak | Komponenta | Čemu služi |
 |---|---|---|
-| 1 | `kind` cluster | 1 control-plane node and 3 worker nodes |
-| 2 | Broker image | Loads `rabbitmq:4.3.4-management` onto each worker |
-| 3 | cert-manager | Issues the TLS certificate for the operator webhooks |
-| 4 | RabbitMQ Cluster Operator | Manages the broker StatefulSet |
-| 5 | `RabbitmqCluster` resource | The 3-node broker cluster itself |
-| 6 | Placement check | Confirms one broker per worker node |
-| 7 | Admin user | Creates `admin` / `admin` with the administrator tag |
-| 8 | Chaos Mesh | Injects the faults for the experiments |
-| 9 | Custom operator | Builds, loads and deploys Phase 2. Skipped if `operator/` is absent. |
+| 1 | `kind` klaster | Jedan kontrolni i tri radna čvora |
+| 2 | Slika brokera | Učitava `rabbitmq:4.3.4-management` na svaki radni čvor |
+| 3 | cert-manager | Izdaje TLS sertifikat za *webhook* operatora |
+| 4 | RabbitMQ Cluster Operator | Upravlja *StatefulSet*-om brokera |
+| 5 | `RabbitmqCluster` | Sam klaster od tri replike |
+| 6 | Provera rasporeda | Potvrđuje da je po jedan broker na svakom čvoru |
+| 7 | Administratorski nalog | Kreira `admin` / `admin` |
+| 8 | Chaos Mesh | Ubrizgava otkaze za eksperimente |
+| 9 | Autorski operator | Gradi i raspoređuje Fazu 2. Preskače se ako `operator/` ne postoji. |
 
-## Why the configuration looks like this
+## Zašto je konfiguracija ovakva
 
-**Three workers, not one.** Raft needs a majority. Three replicas survive the
-loss of one replica, because two votes are still a majority. A single-node
-cluster cannot show this.
+**Tri radna čvora, a ne jedan.** Raft traži većinu. Tri replike preživljavaju gubitak jedne, jer su dva glasa i dalje većina. Klaster sa jednim čvorom to ne može da pokaže.
 
-**Pod anti-affinity is mandatory.** The Kubernetes scheduler can put two
-brokers on one worker node. That node then holds two of the three Raft votes.
-If it fails, the cluster loses its majority and the queue stops. The
-`podAntiAffinity` rule in `infra/rabbitmq/rabbitmq-ha.yaml` prevents this.
-Step 6 of the script checks the result and fails if the rule did not hold.
+**Anti-affinity je obavezan.** Kubernetes raspoređivač sme da smesti dva brokera na isti čvor. Taj čvor tada drži dva od tri Raft glasa, pa njegov ispad uništava većinu i zaustavlja red. Pravilo u `infra/rabbitmq/rabbitmq-ha.yaml` to sprečava, a korak 6 skripte proverava stvarni ishod i prekida izvršavanje ako pravilo nije dalo efekat.
 
-**Docker memory.** The script reads `docker info` and warns below 10 GB. On
-Linux that number is the physical RAM of the host. On Docker Desktop it is the
-limit of the virtual machine, and that is the number you must raise.
+**Memorija koju Docker dobija.** Skripta čita `docker info` i upozorava ispod 10 GB. Na Linux-u je to fizička memorija računara; na Docker Desktop-u je ograničenje virtuelne mašine, i to je broj koji treba podići.
 
-**The script pre-loads the broker image.** Three nodes that pull the same
-image at the same time hit Docker Hub rate limits. A partial pull leaves the
-node in `ImagePullBackOff`. The script pulls the image once and imports it
-into each node. The demonstration then runs offline.
+**Slika brokera se unapred učitava.** Kada tri čvora istovremeno povlače istu sliku, nailazi se na ograničenje broja zahteva i na delimično zapisane slojeve, posle čega čvor ostaje u stanju `ImagePullBackOff`. Skripta sliku povlači jednom i uvozi je na svaki čvor, pa demonstracija radi i bez interneta.
 
-**cert-manager is a dependency, not an extra.** RabbitMQ Cluster Operator
-2.23 serves admission webhooks over TLS. It reads its certificate from
-cert-manager. Without cert-manager, the operator manifest fails to apply.
+**cert-manager je zavisnost, ne dodatak.** RabbitMQ Cluster Operator 2.23 svoje *admission webhook*-e izlaže preko TLS-a i sertifikat uzima od cert-manager-a. Bez njega primena manifesta operatora ne uspeva.
 
-## How to check that it works
+## Provera da sve radi
 
 ```bash
 ./verify-demo.sh
 ```
 
-The script applies a profile and asserts what the broker really holds: four
-quorum queues, three Raft members each, a scoped user, the Secret, and the
-cleanup after a delete. It prints every assertion, so the output is evidence,
-not a claim.
+Skripta primenjuje jedan profil i proverava šta broker zaista sadrži: četiri *quorum* reda sa po tri Raft člana, namenskog korisnika sa uskim ovlašćenjima, tajnu sa pristupnim nizom, i čišćenje posle brisanja. Ispisuje svaku proveru pojedinačno, pa izlaz služi i kao dokaz.
 
-The Go tests run separately:
+Testovi operatora:
 
 ```bash
-cd operator && go test ./...
+cd operator && make test
 ```
 
-## Fault injection
+## Ponavljanje merenja
 
-Apply an experiment, then watch the broker logs and the management UI.
+Poglavlje 6 rada navodi medijanu od tri prolaza po eksperimentu, sa rasponom. Merenja se ponavljaju ovako:
 
 ```bash
-# Cut one broker off from the other two. The remaining two keep the majority.
+./experiments/run-repeated.sh 3
+```
+
+Skripta upisuje po jednu datoteku za svaki prolaz u `experiments/results/runs/`, a zbirni pregled sa medijanom i rasponom u `experiments/results/SAZETAK.md`. Traje oko pola sata i između prolaza čeka da se sva tri brokera vrate u ispravno stanje, kako sledeći prolaz ne bi merio rep prethodnog.
+
+## Izazivanje otkaza
+
+Primenite eksperiment, pa pratite zapise brokera i *management* interfejs.
+
+```bash
+# Odseci jedan broker od preostala dva. Preostala dva zadržavaju većinu.
 kubectl --context kind-diplomski-ha apply -f infra/chaos/network-partition.yaml
 
-# Add 100 ms of latency between all brokers. Raft slows down but continues.
+# Dodaj 100 ms kašnjenja između svih brokera. Raft usporava, ali ne staje.
 kubectl --context kind-diplomski-ha apply -f infra/chaos/network-delay.yaml
 
-# Kill one broker pod. The StatefulSet restarts it and Raft catches it up.
+# Ubij jedan broker pod. StatefulSet ga vraća, a Raft ga sustiže.
 kubectl --context kind-diplomski-ha apply -f infra/chaos/pod-kill-leader.yaml
 ```
 
-To simulate a hardware failure, stop the Docker container of a worker node:
+Gubitak cele mašine simulira se zaustavljanjem kontejnera radnog čvora:
 
 ```bash
 docker stop diplomski-ha-worker2
 docker start diplomski-ha-worker2
 ```
 
-## Repository layout
+## Sadržaj repozitorijuma
 
 ```
 docs/thesis/
-  diplomski.md                   The thesis. This is the source; everything
-                                 else in that folder is generated from it.
-  diplomski.docx                 Generated. Never edit by hand.
-  slike/*.mmd                    Mermaid sources for the figures
-  md-to-docx.js                  Markdown -> .docx, and its README
+  diplomski.md                   Rad. Ovo je izvor; sve ostalo u toj fascikli
+                                 generiše se iz njega.
+  diplomski.docx                 Generisano. Ne menjati rukom.
+  slike/*.mmd                    Mermaid izvori dijagrama
+  md-to-docx.js                  Markdown u .docx, sa uputstvom u README-u
 infra/
-  kind/kind-ha-config.yaml       4-node cluster topology and host port mappings
-  operators/cert-manager.yaml    Pinned cert-manager release
-  operators/cluster-operator.yml Pinned RabbitMQ Cluster Operator release
-  rabbitmq/rabbitmq-ha.yaml      The RabbitmqCluster and the PodDisruptionBudget
-  chaos/                         Chaos Mesh experiments
-operator/                        Phase 2. The custom Go operator.
+  kind/kind-ha-config.yaml       Topologija klastera i preslikavanje portova
+  operators/cert-manager.yaml    Fiksirana verzija cert-manager-a
+  operators/cluster-operator.yml Fiksirana verzija Cluster Operator-a
+  rabbitmq/rabbitmq-ha.yaml      RabbitmqCluster i PodDisruptionBudget
+  chaos/                         Chaos Mesh eksperimenti
+operator/                        Faza 2. Autorski operator u jeziku Go.
+  api/v1alpha1/                  Definicija MicroserviceMessagingProfile
+  internal/rabbitmq/             Klijent prema management API-ju
+  internal/controller/           Reconcile petlja
 experiments/
-  exp-01..05-*.sh                One script per failure scenario
-  run-repeated.sh                Runs all five N times
-  aggregate.py                   Reduces the runs to median, min, max, range
-  plot-results.py                Draws figure 6.1 from the raw samples
-  results/                       Measured output, including all 15 runs
-setup-demo.sh                    Builds the whole environment
-verify-demo.sh                   18 assertions against the live cluster
+  exp-01..05-*.sh                Po jedna skripta za svaki scenario otkaza
+  run-repeated.sh                Pokreće svih pet eksperimenata N puta
+  aggregate.py                   Svodi prolaze na medijanu, minimum i maksimum
+  plot-results.py                Crta Sliku 6.1 iz sirovih uzoraka
+  results/                       Izmereni izlazi, uključujući svih 15 prolaza
+setup-demo.sh                    Podiže celo okruženje
+verify-demo.sh                   18 provera nad živim klasterom
 ```
 
-## Reproducing the measurements
+## Portovi
 
-Chapter 6 of the thesis reports the median of three runs per experiment, with
-the range. To reproduce them:
+`kind` konfiguracija preslikava dva porta sa host mašine na `NodePort` servise. Demonstracija time ne zavisi od `kubectl port-forward`, koji prekida vezu svaki put kada pod nestane — a upravo to se u eksperimentima namerno izaziva.
 
-```bash
-./setup-demo.sh                  # build the environment
-./verify-demo.sh                 # 18 assertions, operator end to end
-./experiments/run-repeated.sh 3  # every experiment, three times
-```
-
-The last command writes one file per run to `experiments/results/runs/` and a
-median/range summary to `experiments/results/SAZETAK.md`. It takes about half
-an hour and waits between runs for three healthy brokers, so a run cannot
-measure the tail of the one before it.
-
-Go tests for the operator:
-
-```bash
-cd operator && make test
-```
-
-## Ports
-
-The `kind` configuration maps two host ports to node ports. The demonstration
-does not depend on `kubectl port-forward`, which drops its connection.
-
-| Host port | Node port | Service |
+| Port na host mašini | NodePort | Usluga |
 |---|---|---|
-| 15672 | 30672 | RabbitMQ management UI |
+| 15672 | 30672 | RabbitMQ *management* interfejs |
 | 5672 | 30567 | AMQP |
