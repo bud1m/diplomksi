@@ -127,14 +127,49 @@ docker start diplomski-ha-worker2
 ## Repository layout
 
 ```
+docs/thesis/
+  diplomski.md                   The thesis. This is the source; everything
+                                 else in that folder is generated from it.
+  diplomski.docx                 Generated. Never edit by hand.
+  slike/*.mmd                    Mermaid sources for the figures
+  md-to-docx.js                  Markdown -> .docx, and its README
 infra/
   kind/kind-ha-config.yaml       4-node cluster topology and host port mappings
   operators/cert-manager.yaml    Pinned cert-manager release
   operators/cluster-operator.yml Pinned RabbitMQ Cluster Operator release
-  rabbitmq/rabbitmq-ha.yaml      The RabbitmqCluster custom resource
+  rabbitmq/rabbitmq-ha.yaml      The RabbitmqCluster and the PodDisruptionBudget
   chaos/                         Chaos Mesh experiments
 operator/                        Phase 2. The custom Go operator.
+experiments/
+  exp-01..05-*.sh                One script per failure scenario
+  run-repeated.sh                Runs all five N times
+  aggregate.py                   Reduces the runs to median, min, max, range
+  plot-results.py                Draws figure 6.1 from the raw samples
+  results/                       Measured output, including all 15 runs
 setup-demo.sh                    Builds the whole environment
+verify-demo.sh                   18 assertions against the live cluster
+```
+
+## Reproducing the measurements
+
+Chapter 6 of the thesis reports the median of three runs per experiment, with
+the range. To reproduce them:
+
+```bash
+./setup-demo.sh                  # build the environment
+./verify-demo.sh                 # 18 assertions, operator end to end
+./experiments/run-repeated.sh 3  # every experiment, three times
+```
+
+The last command writes one file per run to `experiments/results/runs/` and a
+median/range summary to `experiments/results/SAZETAK.md`. It takes about half
+an hour and waits between runs for three healthy brokers, so a run cannot
+measure the tail of the one before it.
+
+Go tests for the operator:
+
+```bash
+cd operator && make test
 ```
 
 ## Ports
